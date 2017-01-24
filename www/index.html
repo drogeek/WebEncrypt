@@ -11,7 +11,7 @@
 
 <body>
 	<div id="menu" data-role="page">
-		<div data-role="header">
+		<div data-role="header" data-id="header">
 			<h1>Mon Coffre</h1>
 		</div>
 		<div role="main" class="ui-content">
@@ -25,10 +25,25 @@
 				<li>A propos</li>
 			</ul>
 		</div>
-		<div data-role="footer">
+		<div data-role="footer" data-id="footer">
 		</div>
 	</div>
 	<div id="listSite" data-role="page">
+		<div data-role="header" data-id="header" data-position="fixed" data-add-back-btn="true">
+			<h1>Mon Coffre</h1>
+		</div>
+		<table data-role="table" data-mode="columntoggle">
+			<thead>
+				<tr>
+					<th>Site</th>
+					<th>Login</th>
+					<th>Password</th>
+				</tr>
+			</thead>
+			<tbody id="tableContent">
+			</tbody>
+		</table>
+		<div data-role="footer" data-id="footer" data-position="fixed"/>
 	</div>
 </body>
 </html>
