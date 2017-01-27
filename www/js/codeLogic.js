@@ -10,8 +10,6 @@ $(function(){
 			$.mobile.loader.prototype.options.theme = "a"
 		});
 
-
-		//I may add a sessionStorage variable in the future to allow the user to login only once per tab
 		if (db.firstLog != 1){
 			popup("create",false);
 		}
@@ -34,28 +32,49 @@ $(function(){
 		});
 
 		$(document).on("pageshow","#listSitePage",function(){
-			$("#listSites").empty();
-			$.mobile.loading('show');	
-			for(idx in decSites){
-				addLineTableWebsite(decSites[idx],"#listSites");
-			}
-			$.mobile.loading('hide');	
+			refreshWebsiteList();
 		});
 });
+
+function refreshWebsiteList(){
+	$("#listSites").empty();
+	for(idx in decSites){
+		addLineTableWebsite(decSites[idx],"#listSites");
+	}
+}
 
 function addLineTableWebsite(obj,target){
 	var $line=$("<li style='text-align: center; margin: 5px'>"+obj.site+"</li>").appendTo(target);
 	$line.click(function(){
+			//bad practice inline style
 		var $popUp = $("<div style='padding: 30px 50px 30px 50px;'/>").popup({
 			transition : "pop",
-			theme : "a"
+			theme : "a",
+			afterclose: function(){
+				this.remove();
+			}
 		});
 		$("<h4>Site</h4>").appendTo($popUp);
-		$("<p>"+obj.site+"</p>").appendTo($popUp);
+		$("<p id='editSite'>"+obj.site+"</p>").appendTo($popUp);
 		$("<h4>Login</h4>").appendTo($popUp);
-		$("<p>"+obj.login+"</p>").appendTo($popUp);
+		$("<p id='editLogin'>"+obj.login+"</p>").appendTo($popUp);
 		$("<h4>Password</h4>").appendTo($popUp);
-		$("<p>"+obj.pass+"</p>").appendTo($popUp);
+		$("<p id='editPass'>"+obj.pass+"</p>").appendTo($popUp);
+		var $editButton = $("<button>Edit</button>").appendTo($popUp);
+		$editButton.click(function(){
+			$('#editSite').replaceWith("<input id='editedSite' type='text' value='"+obj.site+"'/>");
+			$('#editLogin').replaceWith("<input id='editedLogin' type='text' value='"+obj.login+"'/>");
+			$('#editPass').replaceWith("<input id='editedPass' type='text' value='"+obj.pass+"'/>");
+			$editButton.replaceWith("<button id='acceptEdit'>Valider</button>");
+			$('#acceptEdit').click(function(){
+				obj.site=$('#editedSite').val();
+				obj.login=$('#editedLogin').val();
+				obj.pass=$('#editedPass').val();
+				$popUp.popup("close");
+				//TODO: reencrypt everything and store it in the DB	
+				refreshWebsiteList();
+			});
+		});
 		$popUp.popup("open").trigger("create");
 	});
 }
@@ -112,23 +131,17 @@ function popup(type,dismissible){
 				if (sjcl.hash.sha256.hash($("#mdp-box1").val()) == db.hash){
 					password = $("#mdp-box1").val();
 					$.mobile.loading("show");
-					encSites=JSON.parse(db.encSites);
-					for(idx in encSites){
-						decSites.push(JSON.parse(sjcl.json.decrypt(
-							password,
-							encSites[idx]/*,
-							{
-								salt: db.salt,
-								cipher: "aes",
-								mode: "ccm",
-								ks: 128
-							}
-							*/
-							)
-						));
+
+					//launch decrypt async
+					var worker = new Worker('js/worker.js');
+					worker.postMessage(["decrypt",password,db.encSites]);
+					worker.onmessage = function(res){
+						encSites=res.data[0];
+						decSites=res.data[1];
+						$.mobile.loading("hide");
+						$popUp.popup("close");
 					}
-					$.mobile.loading("hide");
-					$popUp.popup("close");
+
 				}
 				else{
 					// we print error if it wasn't already printed
@@ -158,24 +171,16 @@ function popup(type,dismissible){
 					// we show loader
 					$.mobile.loading("show"); 
 
-					for(idx in decSites){
-						newEncSites.push(sjcl.json.encrypt(
-							password,
-							JSON.stringify(decSites[idx])/*,
-							{
-								salt: db.salt,
-								cipher: "aes",
-								mode: "ccm",
-								ks: 128
-							}
-							*/
-						));
+					var worker = new Worker('js/worker.js');
+					worker.postMessage(["encrypt",password,decSites]);
+					worker.onmessage = function(res){
+						encSites=res.data;
+						db.encSites = JSON.stringify(encSites);
+						$.mobile.loading("hide");
+						$popUp.popup("close");
 					}
+					
 					//we hide loader
-					encSites = newEncSites;
-					db.encSites = JSON.stringify(encSites);
-					$.mobile.loading("hide"); 
-					$popUp.popup("close");
 				}
 			}
 
