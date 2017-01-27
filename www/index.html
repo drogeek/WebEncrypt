@@ -11,13 +11,13 @@
 
 <body>
 	<div id="menu" data-role="page">
-		<div data-role="header" data-id="header">
+		<div data-role="header" data-id="header" data-theme="b" data-fullscreen="true">
 			<h1>Mon Coffre</h1>
 		</div>
 		<div role="main" class="ui-content">
 			<ul data-role="listview" data-inset="true">
 				<li><a href="#" id="addSite">Ajouter un site</a></li>
-				<li><a href="#listSite">Lister les sites</a></li>
+				<li><a href="#listSitePage">Lister les sites</a></li>
 				<li><a href="#" id="changePwd">Changer de mot de passe</a></li>
 				<li><a href="#" id="deleteAll">Supprimer tout</a></li>
 				<li><a href="#" id="save">Sauvegarder Base</a></li>
@@ -28,21 +28,13 @@
 		<div data-role="footer" data-id="footer">
 		</div>
 	</div>
-	<div id="listSite" data-role="page">
-		<div data-role="header" data-id="header" data-position="fixed" data-add-back-btn="true">
+	<div id="listSitePage" data-role="page">
+		<div data-role="header" data-id="header" data-position="fixed" data-theme="b" data-add-back-btn="true" data-fullscreen%"true">
 			<h1>Mon Coffre</h1>
 		</div>
-		<table data-role="table" data-mode="columntoggle">
-			<thead>
-				<tr>
-					<th>Site</th>
-					<th>Login</th>
-					<th>Password</th>
-				</tr>
-			</thead>
-			<tbody id="tableContent">
-			</tbody>
-		</table>
+		<div role="main" class="ui-content">
+			<ul id="listSites" data-role="listview" data-inset="true"/>
+		</div>
 		<div data-role="footer" data-id="footer" data-position="fixed"/>
 	</div>
 </body>

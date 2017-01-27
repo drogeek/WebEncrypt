@@ -2,7 +2,7 @@ $(function(){
 		//we check if it's the first time the application was launched
 		//I'm not using cordova right now
 
-		password="", encSites=[];
+		password="", encSites=[], decSites=[];
 		db=localStorage;
 
 		// we set options for loader
@@ -33,37 +33,31 @@ $(function(){
 			popup("deleteAll",true);
 		});
 
-		$(document).on("pagebeforecreate","#listSite",function(){
-			$("#tableContent").empty();
-		});
-
-		$(document).on("pageshow","#listSite",function(){
+		$(document).on("pageshow","#listSitePage",function(){
+			$("#listSites").empty();
 			$.mobile.loading('show');	
-			for(idx in encSites){
-				addLineTableWebsite(
-					JSON.parse(sjcl.json.decrypt(
-						password,
-						encSites[idx]/*,
-						{
-							salt: db.salt,
-							cipher: "aes",
-							mode: "ccm",
-							ks: 128
-						}
-						*/
-					)),
-					"#tableContent"
-				);
+			for(idx in decSites){
+				addLineTableWebsite(decSites[idx],"#listSites");
 			}
 			$.mobile.loading('hide');	
 		});
 });
 
 function addLineTableWebsite(obj,target){
-	var line=$("<tr/>").appendTo(target);
-	$("<td>"+obj.site+"</td>").appendTo(line);
-	$("<td>"+obj.login+"</td>").appendTo(line);
-	$("<td>"+obj.pass+"</td>").appendTo(line);
+	var $line=$("<li style='text-align: center; margin: 5px'>"+obj.site+"</li>").appendTo(target);
+	$line.click(function(){
+		var $popUp = $("<div style='padding: 30px 50px 30px 50px;'/>").popup({
+			transition : "pop",
+			theme : "a"
+		});
+		$("<h4>Site</h4>").appendTo($popUp);
+		$("<p>"+obj.site+"</p>").appendTo($popUp);
+		$("<h4>Login</h4>").appendTo($popUp);
+		$("<p>"+obj.login+"</p>").appendTo($popUp);
+		$("<h4>Password</h4>").appendTo($popUp);
+		$("<p>"+obj.pass+"</p>").appendTo($popUp);
+		$popUp.popup("open").trigger("create");
+	});
 }
 
 function popup(type,dismissible){
@@ -89,8 +83,8 @@ function popup(type,dismissible){
 				if( $("#mdp-box1").val() != '' && $("#mdp-box2").val() != '' && $("#mdp-box1").val() == $("#mdp-box2").val() ){
 					password = $("#mdp-box1").val();
 					db.firstLog = 1;
-					db.encSites = JSON.stringify([]);
 					encSites = [];
+					db.encSites = JSON.stringify(encSites);
 					// we store the hash of the password
 					db.hash = sjcl.hash.sha256.hash(password);
 					// we create a random salt
@@ -98,6 +92,7 @@ function popup(type,dismissible){
 					// of user's interaction, we can't afford this
 					// window.crypto object seems nice, 
 					// but is supported only on 4.4 Android devices and above
+					// useless for now
 					var salt = new Uint32Array(10);
 					window.crypto.getRandomValues(salt)
 					db.salt = sjcl.codec.base64.fromBits(salt);
@@ -116,7 +111,23 @@ function popup(type,dismissible){
 		$("#validateLoginPwd").click(function(){
 				if (sjcl.hash.sha256.hash($("#mdp-box1").val()) == db.hash){
 					password = $("#mdp-box1").val();
+					$.mobile.loading("show");
 					encSites=JSON.parse(db.encSites);
+					for(idx in encSites){
+						decSites.push(JSON.parse(sjcl.json.decrypt(
+							password,
+							encSites[idx]/*,
+							{
+								salt: db.salt,
+								cipher: "aes",
+								mode: "ccm",
+								ks: 128
+							}
+							*/
+							)
+						));
+					}
+					$.mobile.loading("hide");
 					$popUp.popup("close");
 				}
 				else{
@@ -140,21 +151,17 @@ function popup(type,dismissible){
 		$("#validateChangePwd").click(function(){
 			if( sjcl.hash.sha256.hash($("#currentPwd").val()) == db.hash ){
 				if( $("#changeMdp-box1").val() != '' && $("#changeMdp-box2").val() != '' && $("#changeMdp-box1").val() == $("#changeMdp-box2").val() ){
-					oldPwd = password;
 					password = $("#changeMdp-box1").val();
 					db.hash = sjcl.hash.sha256.hash(password);
 					var newEncSites = [];
 					
 					// we show loader
-					$.mobile.loading("show", {
-						theme: "a",
-					});
+					$.mobile.loading("show"); 
 
-					for(idx in encSites){
-						var oldValue = sjcl.json.decrypt(oldPwd,encSites[idx]);
+					for(idx in decSites){
 						newEncSites.push(sjcl.json.encrypt(
 							password,
-							oldValue/*,
+							JSON.stringify(decSites[idx])/*,
 							{
 								salt: db.salt,
 								cipher: "aes",
@@ -165,8 +172,9 @@ function popup(type,dismissible){
 						));
 					}
 					//we hide loader
-					$.mobile.loading("hide"); 
 					encSites = newEncSites;
+					db.encSites = JSON.stringify(encSites);
+					$.mobile.loading("hide"); 
 					$popUp.popup("close");
 				}
 			}
@@ -190,7 +198,7 @@ function popup(type,dismissible){
 				pass: $("#sitePwd").val()
 			}
 
-			for(var i=0; i<10000; i++){
+			decSites.push(objToStore);
 			encSites.push(sjcl.json.encrypt(
 				password,
 				JSON.stringify(objToStore)/*,
@@ -202,7 +210,6 @@ function popup(type,dismissible){
 				}
 				*/
 			));
-			}
 			db.encSites=JSON.stringify(encSites);
 			$popUp.popup("close");
 		});
@@ -213,6 +220,7 @@ function popup(type,dismissible){
 		$("<div><button id='validateDeleteAll'>Oui</button><button id='discardDeleteAll'>Non</button>").appendTo($popUp);
 		$("#validateDeleteAll").click(function(){
 			encSites=[];
+			decSites=[];
 			db.encSites="";
 			$popUp.popup("close");
 		});
