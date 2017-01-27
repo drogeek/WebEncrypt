@@ -76,7 +76,6 @@ function addLineTableWebsite(obj,target){
 
 				//reencrypt everything and store it in the DB	
 				$.mobile.loading("show");
-
 				reencrypt($popUp);
 				refreshWebsiteList();
 			});
@@ -221,7 +220,6 @@ function popup(type,dismissible){
 				pass: $("#sitePwd").val()
 			}
 
-			for(var i=0;i<1000;i++){
 			decSites.push(objToStore);
 			encSites.push(sjcl.json.encrypt(
 				password,
@@ -234,7 +232,6 @@ function popup(type,dismissible){
 				}
 				*/
 			));
-			}
 			db.encSites=JSON.stringify(encSites);
 			$popUp.popup("close");
 		});
