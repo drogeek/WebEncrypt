@@ -61,22 +61,47 @@ function addLineTableWebsite(obj,target){
 		$("<h4>Password</h4>").appendTo($popUp);
 		$("<p id='editPass'>"+obj.pass+"</p>").appendTo($popUp);
 		var $editButton = $("<button>Edit</button>").appendTo($popUp);
+		var $deleteButton = $("<button>Delete</button>").appendTo($popUp);
 		$editButton.click(function(){
 			$('#editSite').replaceWith("<input id='editedSite' type='text' value='"+obj.site+"'/>");
 			$('#editLogin').replaceWith("<input id='editedLogin' type='text' value='"+obj.login+"'/>");
 			$('#editPass').replaceWith("<input id='editedPass' type='text' value='"+obj.pass+"'/>");
-			$editButton.replaceWith("<button id='acceptEdit'>Valider</button>");
+			$buttonAccEdit = $("<button id='acceptEdit'>Valider</button>");
+			$editButton.replaceWith($buttonAccEdit);
 			$('#acceptEdit').click(function(){
 				obj.site=$('#editedSite').val();
 				obj.login=$('#editedLogin').val();
 				obj.pass=$('#editedPass').val();
 				$popUp.popup("close");
-				//TODO: reencrypt everything and store it in the DB	
+
+				//reencrypt everything and store it in the DB	
+				$.mobile.loading("show");
+
+				reencrypt($popUp);
 				refreshWebsiteList();
 			});
 		});
+		$deleteButton.click(function(){
+			var del=decSites.indexOf(obj);
+			if(del != -1){
+				decSites.splice(del,1);
+			}
+			refreshWebsiteList();
+			$popUp.popup("close");
+		});
 		$popUp.popup("open").trigger("create");
 	});
+}
+
+function reencrypt(popUp){
+	var worker = new Worker('js/worker.js');
+	worker.postMessage(["encrypt",password,decSites]);
+	worker.onmessage = function(res){
+		encSites=res.data;
+		db.encSites = JSON.stringify(encSites);
+		$.mobile.loading("hide");
+		popUp.popup("close");
+	}
 }
 
 function popup(type,dismissible){
@@ -170,15 +195,8 @@ function popup(type,dismissible){
 					
 					// we show loader
 					$.mobile.loading("show"); 
-
-					var worker = new Worker('js/worker.js');
-					worker.postMessage(["encrypt",password,decSites]);
-					worker.onmessage = function(res){
-						encSites=res.data;
-						db.encSites = JSON.stringify(encSites);
-						$.mobile.loading("hide");
-						$popUp.popup("close");
-					}
+					
+					reencrypt($popUp);
 					
 					//we hide loader
 				}
@@ -203,6 +221,7 @@ function popup(type,dismissible){
 				pass: $("#sitePwd").val()
 			}
 
+			for(var i=0;i<1000;i++){
 			decSites.push(objToStore);
 			encSites.push(sjcl.json.encrypt(
 				password,
@@ -215,6 +234,7 @@ function popup(type,dismissible){
 				}
 				*/
 			));
+			}
 			db.encSites=JSON.stringify(encSites);
 			$popUp.popup("close");
 		});
